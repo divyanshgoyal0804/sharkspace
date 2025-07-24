@@ -1,8 +1,7 @@
 // client/src/services/api.js
 import axios from 'axios';
 
-const API_BASE = 'https://booking-app-backend-zlal.onrender.com';
-
+const API_BASE = 'https://booking-app-backend-zlal.onrender.com/api';
 export const api = axios.create({
   baseURL: API_BASE,
 });
