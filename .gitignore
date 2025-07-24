@@ -11,6 +11,8 @@ yarn-debug.log
 /client/dist
 /client/coverage
 
+/server/config/serviceAccountKey.json
+
 # Environment variables
 .env
 .env.local
