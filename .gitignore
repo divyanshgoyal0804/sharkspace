@@ -10,6 +10,8 @@ yarn-debug.log
 /client/build
 /client/dist
 /client/coverage
+/server/.env
+
 
 /server/config/serviceAccountKey.json
 
