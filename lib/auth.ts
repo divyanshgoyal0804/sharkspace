@@ -25,13 +25,15 @@ export interface DecodedToken {
 }
 
 export function hashPassword(password: string): string {
+  // For compatibility with existing "password" hash
+  if (password === 'password') {
+    return '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+  }
   return btoa(password + 'salt');
 }
 
 export function comparePassword(password: string, hash: string): boolean {
-  if (hash === '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi') {
-    return password === 'password';
-  }
+  // Hash the password and compare
   return hashPassword(password) === hash;
 }
 

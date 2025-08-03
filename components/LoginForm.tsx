@@ -16,16 +16,34 @@ export default function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simple credential check
-    if (username === 'admin' && password === 'password') {
-      router.push('/admin');
-    } else if (username === 'client1' && password === 'password') {
-      router.push('/client');
-    } else {
-      alert('Invalid credentials. Try admin/password or client1/password');
-    }
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
 
-    setIsLoading(false);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store the token and user info
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Redirect based on role
+      if (data.user.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/client');
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Invalid credentials');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

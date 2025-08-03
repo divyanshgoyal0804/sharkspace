@@ -4,12 +4,24 @@ import { storage } from '@/lib/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { Booking } from '@/lib/types'; // Ensure we use the correct type
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const bookings = await storage.getBookings();
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    let bookings: Booking[];
+    if (userId) {
+      bookings = await storage.getUserBookings(userId);
+    } else {
+      bookings = await storage.getBookings();
+    }
+    if (!Array.isArray(bookings)) {
+      bookings = [];
+    }
     return Response.json(bookings);
   } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("[GET /api/bookings] Error:", error);
+    return Response.json([], { status: 200 });
   }
 }
 

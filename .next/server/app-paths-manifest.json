@@ -1,0 +1,16 @@
+{
+  "/api/admin/bookings/route": "app/api/admin/bookings/route.js",
+  "/api/admin/blocked-slots/route": "app/api/admin/blocked-slots/route.js",
+  "/api/admin/route": "app/api/admin/route.js",
+  "/api/admin/rooms/[id]/route": "app/api/admin/rooms/[id]/route.js",
+  "/api/bookings/route": "app/api/bookings/route.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/admin/users/route": "app/api/admin/users/route.js",
+  "/api/init/route": "app/api/init/route.js",
+  "/api/rooms/route": "app/api/rooms/route.js",
+  "/api/admin/rooms/route": "app/api/admin/rooms/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/page": "app/page.js",
+  "/client/page": "app/client/page.js"
+}

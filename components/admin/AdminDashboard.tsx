@@ -16,7 +16,10 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cache, setCache] = useState<Record<string, { data: any; timestamp: number }>>({});
 
+  const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
+  
   const tabs = [
     { key: 'overview', label: 'Overview', icon: 'ri-dashboard-line' },
     { key: 'rooms', label: 'Rooms', icon: 'ri-building-line' },
@@ -24,6 +27,12 @@ export default function AdminDashboard() {
     { key: 'bookings', label: 'Bookings', icon: 'ri-calendar-check-line' },
     { key: 'blocked', label: 'Blocked Slots', icon: 'ri-forbid-line' }
   ];
+
+  const isCacheValid = (key: string) => {
+    if (!cache[key]) return false;
+    const now = Date.now();
+    return now - cache[key].timestamp < CACHE_DURATION;
+  };
 
   const refreshData = async () => {
     try {
@@ -35,28 +44,100 @@ export default function AdminDashboard() {
         }
       };
 
-      const [roomsRes, usersRes, bookingsRes, blockedRes] = await Promise.all([
-        fetch('/api/admin/rooms', fetchOptions),
-        fetch('/api/admin/users', fetchOptions),
-        fetch('/api/admin/bookings', fetchOptions),
-        fetch('/api/admin/blocked-slots', fetchOptions),
-      ]);
-
-      if (!roomsRes.ok || !usersRes.ok || !bookingsRes.ok || !blockedRes.ok) {
-        throw new Error('Failed to refresh admin data');
+      // Check cache first
+      if (isCacheValid(activeTab)) {
+        switch (activeTab) {
+          case 'rooms':
+            setRooms(cache[activeTab].data);
+            break;
+          case 'users':
+            setUsers(cache[activeTab].data);
+            break;
+          case 'bookings':
+            setBookings(cache[activeTab].data);
+            break;
+          case 'blocked':
+            setBlockedSlots(cache[activeTab].data);
+            break;
+          case 'overview':
+            if (isCacheValid('rooms')) setRooms(cache['rooms'].data);
+            if (isCacheValid('users')) setUsers(cache['users'].data);
+            if (isCacheValid('bookings')) setBookings(cache['bookings'].data);
+            if (isCacheValid('blocked')) setBlockedSlots(cache['blocked'].data);
+            break;
+        }
+        setLoading(false);
+        return;
       }
 
-      const [roomsData, usersData, bookingsData, blockedData] = await Promise.all([
-        roomsRes.json(),
-        usersRes.json(),
-        bookingsRes.json(),
-        blockedRes.json(),
-      ]);
+      switch (activeTab) {
+        case 'rooms': {
+          const response = await fetch('/api/admin/rooms', fetchOptions);
+          if (!response.ok) throw new Error('Failed to fetch rooms');
+          const data = await response.json();
+          setRooms(data);
+          setCache(prev => ({ ...prev, rooms: { data, timestamp: Date.now() } }));
+          break;
+        }
+        case 'users': {
+          const response = await fetch('/api/admin/users', fetchOptions);
+          if (!response.ok) throw new Error('Failed to fetch users');
+          const data = await response.json();
+          setUsers(data);
+          setCache(prev => ({ ...prev, users: { data, timestamp: Date.now() } }));
+          break;
+        }
+        case 'bookings': {
+          const response = await fetch('/api/admin/bookings', fetchOptions);
+          if (!response.ok) throw new Error('Failed to fetch bookings');
+          const data = await response.json();
+          setBookings(data);
+          setCache(prev => ({ ...prev, bookings: { data, timestamp: Date.now() } }));
+          break;
+        }
+        case 'blocked': {
+          const response = await fetch('/api/admin/blocked-slots', fetchOptions);
+          if (!response.ok) throw new Error('Failed to fetch blocked slots');
+          const data = await response.json();
+          setBlockedSlots(data);
+          setCache(prev => ({ ...prev, blocked: { data, timestamp: Date.now() } }));
+          break;
+        }
+        case 'overview': {
+          const [roomsRes, usersRes, bookingsRes, blockedRes] = await Promise.all([
+            fetch('/api/admin/rooms', fetchOptions),
+            fetch('/api/admin/users', fetchOptions),
+            fetch('/api/admin/bookings', fetchOptions),
+            fetch('/api/admin/blocked-slots', fetchOptions),
+          ]);
 
-      setRooms(roomsData);
-      setUsers(usersData);
-      setBookings(bookingsData);
-      setBlockedSlots(blockedData);
+          if (!roomsRes.ok || !usersRes.ok || !bookingsRes.ok || !blockedRes.ok) {
+            throw new Error('Failed to refresh admin data');
+          }
+
+          const [roomsData, usersData, bookingsData, blockedData] = await Promise.all([
+            roomsRes.json(),
+            usersRes.json(),
+            bookingsRes.json(),
+            blockedRes.json(),
+          ]);
+
+          setRooms(roomsData);
+          setUsers(usersData);
+          setBookings(bookingsData);
+          setBlockedSlots(blockedData);
+
+          // Update cache for all overview data
+          setCache(prev => ({
+            ...prev,
+            rooms: { data: roomsData, timestamp: Date.now() },
+            users: { data: usersData, timestamp: Date.now() },
+            bookings: { data: bookingsData, timestamp: Date.now() },
+            blocked: { data: blockedData, timestamp: Date.now() }
+          }));
+          break;
+        }
+      }
     } catch (error) {
       console.error('Failed to refresh admin data:', error);
       setRooms([]);
@@ -71,7 +152,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [activeTab]);
 
   if (loading) {
     return (

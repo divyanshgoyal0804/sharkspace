@@ -19,7 +19,9 @@ export default function UserManagement({ users, onUpdate }: UserManagementProps)
     role: 'client' as 'client' | 'admin'
   });
 
-  const clientUsers = users.filter(u => u.role === 'client');
+  // Remove this filter so all users (admin and client) are shown
+  // const clientUsers = users.filter(u => u.role === 'client');
+  const displayedUsers = users;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,19 +33,15 @@ export default function UserManagement({ users, onUpdate }: UserManagementProps)
 
     const userData = {
       username: formData.username,
-      password: btoa(formData.password + 'salt'), // match your hashPassword
+      password: formData.password, // Send plain password, let server hash it
       role: formData.role,
       createdAt: new Date()
     };
 
-    await fetch('/api/admin', {
+    await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        resource: 'users',
-        action: 'create',
-        data: userData
-      })
+      body: JSON.stringify(userData)
     });
 
     onUpdate();
@@ -85,7 +83,7 @@ export default function UserManagement({ users, onUpdate }: UserManagementProps)
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {clientUsers.map((user, index) => (
+              {displayedUsers.map((user, index) => (
                 <motion.tr key={user.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

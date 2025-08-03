@@ -20,9 +20,10 @@ const BookingModal = ({
   onClose,
   onBookingComplete,
   selectedDate,
-}: BookingModalProps) => {
-  // Hardcoded user for now
-  const user = { userId: 'client1', username: 'client1', role: 'client' };
+  user // <-- Add user prop
+}: BookingModalProps & { user: { id: string; username: string; role: string } }) => {
+  // Remove hardcoded user
+  // const user = { userId: 'client1', username: 'client1', role: 'client' };
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
@@ -87,7 +88,7 @@ const BookingModal = ({
     const bookings: Booking[] = await bookingsRes.json();
 
     const todayBookings = bookings.filter((b) =>
-      b.userId === user.userId &&
+      b.userId === user.id &&
       b.roomId === room.id &&
       isSameDay(new Date(b.startTime), selectedDate)
     );
@@ -133,8 +134,8 @@ const BookingModal = ({
       const booking: Booking = {
         id: uuidv4(),
         roomId: room.id,
-        userId: 'client1', // Using hardcoded user ID for now
-        username: 'client1', // Using hardcoded username for now
+        userId: user.id, // Use logged-in user's id
+        username: user.username, // Use logged-in user's username
         roomName: room.name,
         startTime: startDateTime,
         endTime: endDateTime,
@@ -174,7 +175,7 @@ const BookingModal = ({
     const bookings: Booking[] = await res.json();
 
     const todayBookings = bookings.filter((b) =>
-      b.userId === 'client1' && // Using hardcoded user ID for now
+      b.userId === user.id && // Use logged-in user's id
       b.roomId === room.id &&
       isSameDay(new Date(b.startTime), selectedDate)
     );

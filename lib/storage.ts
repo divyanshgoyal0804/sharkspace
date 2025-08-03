@@ -95,24 +95,30 @@ export async function initializeData(): Promise<void> {
 
   // Create default users if none exist
   const userCount = await UserModel.countDocuments().exec();
+  // Always ensure admin user exists
+  const adminUser = await UserModel.findOne({ username: 'admin' }).exec();
+  if (!adminUser) {
+    const hashedPassword = hashPassword('password');
+    await UserModel.create({
+      id: '1',
+      username: 'admin',
+      password: hashedPassword,
+      role: 'admin',
+      createdAt: new Date(),
+    });
+    console.log('✅ Admin user created');
+  }
+
+  // Add default client if no users exist
   if (userCount === 0) {
-    const hashedPassword = await hashPassword('password');
-    await UserModel.insertMany([
-      {
-        id: '1',
-        username: 'admin',
-        password: hashedPassword,
-        role: 'admin',
-        createdAt: new Date(),
-      },
-      {
-        id: '2',
-        username: 'client1',
-        password: hashedPassword,
-        role: 'client',
-        createdAt: new Date(),
-      },
-    ]);
+    const hashedPassword = hashPassword('password');
+    await UserModel.create({
+      id: '2',
+      username: 'client1',
+      password: hashedPassword,
+      role: 'client',
+      createdAt: new Date(),
+    });
     console.log('✅ Default users created');
   }
 
@@ -195,6 +201,13 @@ class StorageManager {
     await RoomModel.insertMany(rooms);
   }
 
+  // ---------- Users ----------
+  async addUser(user: User): Promise<void> {
+    await connectDB();
+    const { id = crypto.randomUUID(), ...userData } = user;
+    await UserModel.create({ ...userData, id });
+  }
+
   // ---------- Bookings ----------
   async getBookings(): Promise<Booking[]> {
     await connectDB();
@@ -222,7 +235,17 @@ class StorageManager {
   // ---------- Utility ----------
   async getUserBookings(userId: string): Promise<Booking[]> {
     await connectDB();
-    return (await BookingModel.find({ userId }, { _id: 0, __v: 0 }).lean()) as unknown as Booking[];
+    try {
+      const bookings = await BookingModel.find({ userId }, { _id: 0, __v: 0 }).lean();
+      if (!bookings) {
+        console.warn(`[getUserBookings] No bookings found for userId: ${userId}`);
+        return [];
+      }
+      return bookings as unknown as Booking[];
+    } catch (err) {
+      console.error(`[getUserBookings] Error for userId ${userId}:`, err);
+      return [];
+    }
   }
 
   async getRoomBookings(roomId: string): Promise<Booking[]> {

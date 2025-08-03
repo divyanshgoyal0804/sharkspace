@@ -16,55 +16,52 @@ export default function ClientDashboard() {
   const [activeTab, setActiveTab] = useState<'rooms' | 'bookings'>('rooms');
   const [loading, setLoading] = useState(true);
 
-  // Mock user (in real app, use useAuth())
-  const user = { userId: 'client1', username: 'client1', role: 'client' };
+  // Get user from localStorage
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      setUser(JSON.parse(userStr));
+    }
+  }, []);
 
   // ✅ Load data from API, not direct storage
   useEffect(() => {
     const loadData = async () => {
+      if (!user) return;
       try {
         setLoading(true);
-
-        // Fetch rooms and bookings with proper headers
         const fetchOptions = {
           headers: {
             'Content-Type': 'application/json',
           }
         };
-
-        // Fetch rooms and bookings
         const roomsRes = await fetch('/api/rooms', fetchOptions);
-        const bookingsRes = await fetch('/api/bookings', fetchOptions);
-
-        // Handle specific error cases
+        const bookingsRes = await fetch(`/api/bookings?userId=${user.id}`, fetchOptions);
         if (!roomsRes.ok) {
           throw new Error(`Failed to fetch rooms: ${roomsRes.status} ${roomsRes.statusText}`);
         }
         if (!bookingsRes.ok) {
           throw new Error(`Failed to fetch bookings: ${bookingsRes.status} ${bookingsRes.statusText}`);
         }
-
-        // Parse response data
         const roomsData = await roomsRes.json();
         const bookingsData = await bookingsRes.json();
-
-        // Ensure we have arrays
         setRooms(Array.isArray(roomsData) ? roomsData : []);
         setBookings(Array.isArray(bookingsData) ? bookingsData : []);
       } catch (error) {
         console.error('Failed to load data:', error);
-        // Set error state to empty arrays for safety
         setRooms([]);
         setBookings([]);
-        // Show error in UI using alert (you might want to use a proper toast/notification system)
         alert(error instanceof Error ? error.message : 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
-
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   // ✅ Refresh data after booking
   const handleBookingComplete = () => {
@@ -85,7 +82,7 @@ export default function ClientDashboard() {
     const today = startOfDay(new Date());
     return bookings
       .filter(b => 
-        b.userId === user.userId && 
+        b.userId === user.id && 
         b.roomId === roomId && 
         isSameDay(new Date(b.startTime), today)
       )
@@ -162,7 +159,7 @@ export default function ClientDashboard() {
 
         {activeTab === 'bookings' && (
           <div>
-            <BookingHistory bookings={bookings.filter(b => b.userId === user.userId)} />
+            <BookingHistory bookings={bookings.filter(b => b.userId === user.id)} />
           </div>
         )}
       </div>
@@ -174,6 +171,7 @@ export default function ClientDashboard() {
           room={selectedRoom}
           onBookingComplete={handleBookingComplete}
           selectedDate={new Date()} // pass if needed
+          user={user} // Pass the logged-in user
         />
       )}
     </Layout>
