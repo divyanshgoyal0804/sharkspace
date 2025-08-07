@@ -3,6 +3,7 @@
 
 import LoginForm from '@/components/LoginForm';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import { Suspense } from 'react';
 
 export default function Home() {
   return (
@@ -59,7 +60,9 @@ export default function Home() {
           </div>
           
           <div>
-            <LoginForm />
+            <Suspense>
+              <LoginForm />
+            </Suspense>
           </div>
         </div>
       </div>

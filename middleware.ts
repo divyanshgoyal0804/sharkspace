@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { DecodedToken } from '@/lib/auth';
+import { verifyToken } from '@/lib/auth';
 
 export function middleware(request: NextRequest) {
-  // Skip for non-API routes
-  if (!request.url.includes('/api/')) {
-    return NextResponse.next();
-  }
+  // Declare all variables once at the top
+  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin') || request.nextUrl.pathname.startsWith('/api/admin');
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
+  const cookieHeader: string | null = request.headers.get('cookie');
+  let token: string | null = null;
+  let decoded: any = null;
 
-  // Allow public routes
+  // Allow public API routes
   if (
     request.url.includes('/api/auth/') ||
     request.url.includes('/api/init') ||
@@ -18,21 +20,58 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For admin routes, use hardcoded admin check for now
-  if (request.url.includes('/api/admin/')) {
-    // Extract username from request headers or cookies
-    const username = request.headers.get('x-user') || 'admin'; // Default to 'admin' for testing
+  // Extract JWT from cookies
+  if (cookieHeader) {
+    const match = cookieHeader.match(/token=([^;]+)/);
+    if (match) token = match[1];
+  }
+  if (token) {
+    decoded = verifyToken(token);
+  }
 
-    if (username !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  if (!token) {
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    } else if (isAdminRoute) {
+      // Redirect to root login with redirect param
+      const redirectUrl = new URL('/', request.url);
+      redirectUrl.searchParams.set('redirect', request.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+    return NextResponse.next();
+  }
+  if (!decoded) {
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    } else if (isAdminRoute) {
+      // Redirect to root login with redirect param
+      const redirectUrl = new URL('/', request.url);
+      redirectUrl.searchParams.set('redirect', request.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
     }
     return NextResponse.next();
   }
 
-  // Default response for other routes
+  // Role-based access for admin routes
+  if (isAdminRoute) {
+    if (decoded.role !== 'admin') {
+      if (isApiRoute) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      } else {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
+  }
+
+  // Attach user info to request if needed (future enhancement)
   return NextResponse.next();
 }
 
+
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    '/api/:path*',
+    '/admin',
+    '/admin/:path*',
+  ],
 }

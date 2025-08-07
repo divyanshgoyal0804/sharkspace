@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { storage, connectDB } from '@/lib/storage';
 import { comparePassword, generateToken, hashPassword } from '@/lib/auth';
+import { serialize } from 'cookie';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,15 +32,31 @@ export async function POST(request: NextRequest) {
 
     // Generate JWT token
     const token = generateToken(user);
-
-    return Response.json({
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role
-      }
+    const cookie = serialize('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 // 1 day
     });
+
+    return new Response(
+      JSON.stringify({
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role
+        },
+        token
+      }),
+      {
+        status: 200,
+        headers: {
+          'Set-Cookie': cookie,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   } catch (error) {
     console.error('Login error:', error);
     return Response.json(

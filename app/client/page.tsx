@@ -15,18 +15,28 @@ export default function ClientDashboard() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'rooms' | 'bookings'>('rooms');
   const [loading, setLoading] = useState(true);
-
-  // Get user from localStorage
   const [user, setUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      setUser(JSON.parse(userStr));
-    }
+    // Fallback: check authentication and client role
+    const checkAuth = async () => {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!res.ok) {
+        window.location.href = '/';
+        return;
+      }
+      const data = await res.json();
+      if (!data.user || data.user.role !== 'client') {
+        window.location.href = '/';
+        return;
+      }
+      setUser(data.user);
+      setAuthChecked(true);
+    };
+    checkAuth();
   }, []);
 
-  // ✅ Load data from API, not direct storage
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
@@ -35,7 +45,8 @@ export default function ClientDashboard() {
         const fetchOptions = {
           headers: {
             'Content-Type': 'application/json',
-          }
+          },
+          credentials: 'include' as RequestCredentials,
         };
         const roomsRes = await fetch('/api/rooms', fetchOptions);
         const bookingsRes = await fetch(`/api/bookings?userId=${user.id}`, fetchOptions);
@@ -68,7 +79,8 @@ export default function ClientDashboard() {
     fetch('/api/bookings', {
       headers: {
         'Content-Type': 'application/json',
-      }
+      },
+      credentials: 'include'
     })
       .then(res => res.json())
       .then(data => Array.isArray(data) ? setBookings(data) : setBookings([]))
@@ -93,6 +105,16 @@ export default function ClientDashboard() {
     setSelectedRoom(room);
     setIsBookingModalOpen(true);
   };
+
+  if (!authChecked) {
+    return (
+      <Layout title="Client Dashboard">
+        <div className="flex justify-center items-center h-64">
+          <p className="text-lg text-gray-600">Checking authentication...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (

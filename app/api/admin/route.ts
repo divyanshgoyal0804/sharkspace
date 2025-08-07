@@ -2,11 +2,11 @@
 import { NextRequest } from 'next/server';
 import { initializeData } from '@/lib/storage';
 import { storage } from '@/lib/storage';
+import { getTokenFromRequest, verifyToken } from '@/lib/auth';
 
 type Resource = 'rooms' | 'users' | 'bookings' | 'blockedSlots';
 type Action = 'get' | 'create' | 'update' | 'delete';
 
-// ✅ Map resource to getter/setter methods
 const getterMap = {
   rooms: 'getRooms',
   users: 'getUsers',
@@ -22,6 +22,12 @@ const setterMap = {
 };
 
 export async function GET(request: NextRequest) {
+  // Fallback JWT verification
+  const token = getTokenFromRequest(request);
+  const decoded = token && verifyToken(token);
+  if (!decoded || decoded.role !== 'admin') {
+    return Response.json({ error: 'Admin access required' }, { status: 403 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const resource = searchParams.get('resource') as Resource;
@@ -42,6 +48,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Fallback JWT verification
+  const token = getTokenFromRequest(request);
+  const decoded = token && verifyToken(token);
+  if (!decoded || decoded.role !== 'admin') {
+    return Response.json({ error: 'Admin access required' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const resource = body.resource as Resource;

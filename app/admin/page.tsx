@@ -16,6 +16,25 @@ export default function Page() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    // Fallback: check authentication and admin role
+    const checkAuth = async () => {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!res.ok) {
+        window.location.href = '/';
+        return;
+      }
+      const data = await res.json();
+      if (!data.user || data.user.role !== 'admin') {
+        window.location.href = '/';
+        return;
+      }
+      setAuthChecked(true);
+    };
+    checkAuth();
+  }, []);
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: 'ri-dashboard-line' },
@@ -30,9 +49,9 @@ export default function Page() {
       setLoading(true);
       const fetchOptions = {
         headers: {
-          'Content-Type': 'application/json',
-          'x-user': 'admin'
-        }
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include' as RequestCredentials
       };
 
       const [roomsRes, usersRes, bookingsRes, blockedRes] = await Promise.all([
@@ -70,8 +89,20 @@ export default function Page() {
   };
 
   useEffect(() => {
-    refreshData();
-  }, []);
+    if (authChecked) {
+      refreshData();
+    }
+  }, [authChecked]);
+
+  if (!authChecked) {
+    return (
+      <Layout title="Admin Dashboard">
+        <div className="flex justify-center items-center h-64">
+          <p className="text-lg text-gray-600">Checking authentication...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (

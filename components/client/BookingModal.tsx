@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Room, Booking } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 interface BookingModalProps {
   room: Room;
@@ -19,16 +19,15 @@ const BookingModal = ({
   isOpen,
   onClose,
   onBookingComplete,
-  selectedDate,
-  user // <-- Add user prop
+  selectedDate: initialDate,
+  user
 }: BookingModalProps & { user: { id: string; username: string; role: string } }) => {
-  // Remove hardcoded user
-  // const user = { userId: 'client1', username: 'client1', role: 'client' };
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [dailyUsage, setDailyUsage] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
 
   useEffect(() => {
     const fetchUsage = async () => {
@@ -73,18 +72,15 @@ const BookingModal = ({
       return false;
     }
 
-    // Check daily usage
     const bookingsRes = await fetch('/api/bookings', {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+
     if (!bookingsRes.ok) {
       setError('Failed to fetch bookings');
       return false;
     }
-    
+
     const bookings: Booking[] = await bookingsRes.json();
 
     const todayBookings = bookings.filter((b) =>
@@ -95,12 +91,11 @@ const BookingModal = ({
 
     const usedMinutes = todayBookings.reduce((total, b) => total + b.duration, 0);
     if (usedMinutes + duration > 60) {
-      setError(`You can only book ${60 - usedMinutes} more minutes today`);
+      setError(`You can only book ${60 - usedMinutes} more minutes on this day`);
       return false;
     }
 
-    // Check if the time slot overlaps with existing bookings
-    const overlappingBookings = bookings.filter(b => 
+    const overlappingBookings = bookings.filter(b =>
       b.roomId === room.id &&
       new Date(b.startTime) < endDateTime &&
       new Date(b.endTime) > startDateTime
@@ -134,8 +129,8 @@ const BookingModal = ({
       const booking: Booking = {
         id: uuidv4(),
         roomId: room.id,
-        userId: user.id, // Use logged-in user's id
-        username: user.username, // Use logged-in user's username
+        userId: user.id,
+        username: user.username,
         roomName: room.name,
         startTime: startDateTime,
         endTime: endDateTime,
@@ -144,7 +139,6 @@ const BookingModal = ({
         createdAt: new Date(),
       };
 
-      // Create booking via API
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,21 +161,21 @@ const BookingModal = ({
 
   const getUserDailyUsage = async (): Promise<number> => {
     const res = await fetch('/api/bookings', {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
     if (!res.ok) return 0;
     const bookings: Booking[] = await res.json();
 
     const todayBookings = bookings.filter((b) =>
-      b.userId === user.id && // Use logged-in user's id
+      b.userId === user.id &&
       b.roomId === room.id &&
       isSameDay(new Date(b.startTime), selectedDate)
     );
 
     return todayBookings.reduce((total, b) => total + b.duration, 0);
   };
+
+  const nextFiveDays = Array.from({ length: 5 }, (_, i) => addDays(new Date(), i));
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
@@ -191,7 +185,24 @@ const BookingModal = ({
           <Dialog.Title className="text-xl font-semibold">
             Book Room: {room.name}
           </Dialog.Title>
-          <p>Date: {format(selectedDate, 'PPP')}</p>
+
+          {/* 📅 Date Picker Dropdown */}
+          <div className="flex flex-col space-y-2">
+            <label htmlFor="date">Select Date:</label>
+            <select
+              id="date"
+              value={format(selectedDate, 'yyyy-MM-dd')}
+              onChange={(e) => setSelectedDate(new Date(e.target.value))}
+              className="border rounded p-2"
+            >
+              {nextFiveDays.map((date) => (
+                <option key={date.toISOString()} value={format(date, 'yyyy-MM-dd')}>
+                  {format(date, 'PPP')}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex flex-col space-y-2">
             <label>Start Time:</label>
             <input
@@ -208,7 +219,7 @@ const BookingModal = ({
               className="border rounded p-2"
             />
             <p className="text-sm text-gray-500">
-              You’ve used {dailyUsage} out of 60 minutes today.
+              You’ve used {dailyUsage} out of 60 minutes on {format(selectedDate, 'PPP')}.
             </p>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button

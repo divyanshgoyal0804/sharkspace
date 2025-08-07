@@ -5,6 +5,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { Booking } from '@/lib/types'; // Ensure we use the correct type
 
 export async function GET(request: NextRequest) {
+  // JWT verification (client or admin)
+  const { getTokenFromRequest, verifyToken } = await import('@/lib/auth');
+  const token = getTokenFromRequest(request);
+  const decoded = token && verifyToken(token);
+  if (!decoded || (decoded.role !== 'client' && decoded.role !== 'admin')) {
+    return Response.json({ error: 'Authentication required' }, { status: 403 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -26,6 +33,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // JWT verification (client or admin)
+  const { getTokenFromRequest, verifyToken } = await import('@/lib/auth');
+  const token = getTokenFromRequest(request);
+  const decoded = token && verifyToken(token);
+  if (!decoded || (decoded.role !== 'client' && decoded.role !== 'admin')) {
+    return Response.json({ error: 'Authentication required' }, { status: 403 });
+  }
   try {
     const body = await request.json();
 

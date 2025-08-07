@@ -1,84 +1,74 @@
-// lib/auth.ts
-//require('dotenv').config();
+import jwt from "jsonwebtoken"
+import { NextRequest } from "next/server"
+import { cookies } from "next/headers"
 
-import { NextRequest } from 'next/server';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-
+const JWT_SECRET = process.env.JWT_SECRET || "changeme-secret"
 
 export interface User {
-  id: string;
-  username: string;
-  password: string;
-  role: 'client' | 'admin';
-  createdAt: Date;
+  id: string
+  username: string
+  password: string
+  role: "client" | "admin"
+  createdAt: Date
 }
 
-// ✅ Fixed: Added 'exp'
 export interface DecodedToken {
-  userId: string;
-  username: string;
-  role: 'client' | 'admin';
-  exp: number;
-  iat?: number;
+  userId: string
+  username: string
+  role: "client" | "admin"
+  exp: number
+  iat?: number
 }
 
 export function hashPassword(password: string): string {
-  // For compatibility with existing "password" hash
-  if (password === 'password') {
-    return '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+  if (password === "password") {
+    return "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi"
   }
-  return btoa(password + 'salt');
+  return btoa(password + "salt")
 }
 
 export function comparePassword(password: string, hash: string): boolean {
-  // Hash the password and compare
-  return hashPassword(password) === hash;
+  return hashPassword(password) === hash
 }
 
-export function generateToken(user: Pick<User, 'id' | 'username' | 'role'>): string {
-  const payload = {
-    userId: user.id,
-    username: user.username,
-    role: user.role,
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
-  };
-
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payloadStr = btoa(JSON.stringify(payload));
-  const signature = btoa(`${header}.${payloadStr}.${JWT_SECRET}`);
-
-  return `${header}.${payloadStr}.${signature}`;
+export function generateToken(user: Pick<User, "id" | "username" | "role">): string {
+  return jwt.sign(
+    {
+      userId: user.id,
+      username: user.username,
+      role: user.role
+    },
+    JWT_SECRET,
+    { expiresIn: "24h" }
+  )
 }
 
 export function verifyToken(token: string): DecodedToken | null {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-
-    const payload = JSON.parse(atob(parts[1]));
-
-    if (payload.exp * 1000 < Date.now()) {
-      return null;
-    }
-
-    return {
-      userId: payload.userId,
-      username: payload.username,
-      role: payload.role,
-      exp: payload.exp,
-      iat: payload.iat,
-    };
+    return jwt.verify(token, JWT_SECRET) as DecodedToken
   } catch {
-    return null;
+    return null
   }
 }
 
 export function getTokenFromRequest(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
+  // Try Authorization header first
+  const authHeader = request.headers.get("authorization")
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.substring(7)
   }
-  return null;
+  // Try cookies (for SSR/middleware)
+  const cookieHeader = request.headers.get("cookie")
+  if (cookieHeader) {
+    const match = cookieHeader.match(/token=([^;]+)/)
+    if (match) return match[1]
+  }
+  return null
+}
+
+export async function getTokenFromCookies(): Promise<string | null> {
+  // For use in server components/middleware
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value as string | undefined;
+  return token || null;
 }

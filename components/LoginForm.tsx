@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -11,6 +11,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +21,8 @@ export default function LoginForm() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -33,11 +35,14 @@ export default function LoginForm() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // Redirect based on role
-      if (data.user.role === 'admin') {
-        router.push('/admin');
+      // Redirect based on role and redirect param
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        window.location.href = redirect;
+      } else if (data.user.role === 'admin') {
+        window.location.href = '/admin';
       } else {
-        router.push('/client');
+        window.location.href = '/client';
       }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Invalid credentials');

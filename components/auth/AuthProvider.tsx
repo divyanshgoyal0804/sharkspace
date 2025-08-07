@@ -5,7 +5,7 @@ import { DecodedToken } from '@/lib/auth';
 
 interface AuthContextType {
   user: DecodedToken | null;
-  login: (token: string) => void;
+  login: () => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -17,39 +17,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // ❌ Remove: initializeData(); → not allowed on client
-
-    const token = localStorage.getItem('token');
-    if (token) {
+    // Fetch user info from /api/auth/me (uses cookie)
+    const fetchUser = async () => {
+      setIsLoading(true);
       try {
-        const decoded = JSON.parse(atob(token.split('.')[1])) as DecodedToken;
-        if (decoded.exp * 1000 > Date.now()) {
-          setUser(decoded);
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user || null);
         } else {
-          localStorage.removeItem('token');
+          setUser(null);
         }
-      } catch (error) {
-        console.error('Invalid token', error);
-        localStorage.removeItem('token');
+      } catch {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
-
-    setIsLoading(false);
+    };
+    fetchUser();
   }, []);
 
-  const login = (token: string) => {
-    localStorage.setItem('token', token);
-    try {
-      const decoded = JSON.parse(atob(token.split('.')[1])) as DecodedToken;
-      setUser(decoded);
-    } catch (error) {
-      console.error('Invalid token during login', error);
-    }
+  const login = async () => {
+    // After login, refetch user info
+    await fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setUser(data?.user || null));
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
+    // Clear cookie by calling logout endpoint (to be implemented)
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .then(() => setUser(null));
     window.location.href = '/';
   };
 
