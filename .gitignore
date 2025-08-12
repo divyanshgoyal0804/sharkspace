@@ -46,3 +46,11 @@ coverage/
 # yarn.lock
 # pnpm-lock.yaml
 
+.next/
+node_modules/
+dist/
+build/
+.next/
+node_modules/
+dist/
+build/
