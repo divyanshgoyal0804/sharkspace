@@ -1,4 +1,4 @@
-// File: /Users/divyanshgoyal/Downloads/Sharkspace/app/client/page.tsx
+// File: /Users/divyanshgoyal/Documents/sharkspace-main/app/client/page.tsx
 import * as entry from '../../../../app/client/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

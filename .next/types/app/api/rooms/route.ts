@@ -1,4 +1,4 @@
-// File: /Users/divyanshgoyal/Downloads/Sharkspace/app/api/rooms/route.ts
+// File: /Users/divyanshgoyal/Documents/sharkspace-main/app/api/rooms/route.ts
 import * as entry from '../../../../../app/api/rooms/route.js'
 import type { NextRequest } from 'next/server.js'
 

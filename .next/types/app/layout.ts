@@ -1,4 +1,4 @@
-// File: /Users/divyanshgoyal/Downloads/Sharkspace/app/layout.tsx
+// File: /Users/divyanshgoyal/Documents/sharkspace-main/app/layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

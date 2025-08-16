@@ -5,13 +5,27 @@ import { Dialog } from '@headlessui/react';
 import { Room, Booking } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+
+// Helper to get date string yyyy-MM-dd
+const getDateString = (date: Date) => {
+  return date.toISOString().split('T')[0];
+};
+
+// Helper to add days
+const addDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
 
 interface BookingModalProps {
   room: Room;
   isOpen: boolean;
   onClose: () => void;
   onBookingComplete: () => void;
-  selectedDate: Date;
+  user: { id: string; username: string; role: string };
 }
 
 const BookingModal = ({
@@ -19,44 +33,30 @@ const BookingModal = ({
   isOpen,
   onClose,
   onBookingComplete,
-  selectedDate,
-  user // <-- Add user prop
-}: BookingModalProps & { user: { id: string; username: string; role: string } }) => {
-  // Remove hardcoded user
-  // const user = { userId: 'client1', username: 'client1', role: 'client' };
-  const [startDate, setStartDate] = useState(selectedDate);
-  const [endDate, setEndDate] = useState(selectedDate);
+  user
+}: BookingModalProps) => {
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState(getDateString(today));
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [dailyUsage, setDailyUsage] = useState(0);
 
+  // Update usage for current selectedDate only
   useEffect(() => {
     const fetchUsage = async () => {
-      const usage = await getUserDailyUsage();
+      const usage = await getUserDailyUsage(new Date(selectedDate));
       setDailyUsage(usage);
     };
     if (isOpen) fetchUsage();
   }, [isOpen, selectedDate]);
 
-  // Create a Date object from a date and time string
-  const createDateTimeFromDateAndTime = (date: Date, time: string): Date => {
+  const createDateTimeFromTime = (time: string): Date => {
     const [hours, minutes] = time.split(':').map(Number);
-    const newDate = new Date(date);
-    newDate.setHours(hours, minutes, 0, 0);
-    return newDate;
-  };
-
-  // Helper to get all dates in range
-  const getDatesInRange = (start: Date, end: Date) => {
-    const dates = [];
-    let current = new Date(start);
-    while (current <= end) {
-      dates.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    return dates;
+    const d = new Date(selectedDate);
+    d.setHours(hours, minutes, 0, 0);
+    return d;
   };
 
   const calculateDuration = (start: Date, end: Date): number => {
@@ -72,70 +72,52 @@ const BookingModal = ({
       setError('Please select both start and end time');
       return false;
     }
-    if (!startDate || !endDate) {
-      setError('Please select both start and end dates');
+    const bookingDate = new Date(selectedDate);
+    const minDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const maxDate = new Date(minDate);
+    maxDate.setDate(maxDate.getDate() + 4);
+    if (bookingDate < minDate || bookingDate > maxDate) {
+      setError('You can only book for today or the next 4 days');
       return false;
     }
-    // Ensure startDate is not after endDate
-    if (startDate > endDate) {
-      setError('End date must be after or same as start date');
+    const startDateTime = createDateTimeFromTime(startTime);
+    const endDateTime = createDateTimeFromTime(endTime);
+    if (startDateTime >= endDateTime) {
+      setError('End time must be after start time');
       return false;
     }
-    // Ensure booking is within next 5 days
-    const now = new Date();
-    const maxDate = new Date(now);
-    maxDate.setDate(now.getDate() + 5);
-    if (startDate < now || endDate > maxDate) {
-      setError('You can only book within the next five days');
+    const duration = calculateDuration(startDateTime, endDateTime);
+    if (duration > 60) {
+      setError('Booking duration cannot exceed 60 minutes');
       return false;
     }
-
-    // Multi-day validation: check each day for usage and overlaps
     const bookingsRes = await fetch('/api/bookings', {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
     if (!bookingsRes.ok) {
       setError('Failed to fetch bookings');
       return false;
     }
     const bookings: Booking[] = await bookingsRes.json();
-    const dates = getDatesInRange(startDate, endDate);
-    for (const date of dates) {
-      const startDateTime = createDateTimeFromDateAndTime(date, startTime);
-      const endDateTime = createDateTimeFromDateAndTime(date, endTime);
-      if (startDateTime >= endDateTime) {
-        setError('End time must be after start time for all days');
-        return false;
-      }
-      const duration = calculateDuration(startDateTime, endDateTime);
-      if (duration > 60) {
-        setError('Booking duration cannot exceed 60 minutes per day');
-        return false;
-      }
-      // Check daily usage
-      const dayBookings = bookings.filter((b) =>
-        b.userId === user.id &&
-        b.roomId === room.id &&
-        isSameDay(new Date(b.startTime), date)
-      );
-      const usedMinutes = dayBookings.reduce((total, b) => total + b.duration, 0);
-      if (usedMinutes + duration > 60) {
-        setError(`You can only book ${60 - usedMinutes} more minutes on ${format(date, 'PPP')}`);
-        return false;
-      }
-      // Check overlap
-      const overlappingBookings = bookings.filter(b => 
-        b.roomId === room.id &&
-        isSameDay(new Date(b.startTime), date) &&
-        new Date(b.startTime) < endDateTime &&
-        new Date(b.endTime) > startDateTime
-      );
-      if (overlappingBookings.length > 0) {
-        setError(`This time slot is not available on ${format(date, 'PPP')}`);
-        return false;
-      }
+    const todayBookings = bookings.filter((b) =>
+      b.userId === user.id &&
+      b.roomId === room.id &&
+      isSameDay(new Date(b.startTime), bookingDate)
+    );
+    const usedMinutes = todayBookings.reduce((total, b) => total + b.duration, 0);
+    if (usedMinutes + duration > 60) {
+      setError(`You can only book ${60 - usedMinutes} more minutes on ${format(bookingDate, 'PPP')}`);
+      return false;
+    }
+    const overlappingBookings = bookings.filter(b =>
+      b.roomId === room.id &&
+      isSameDay(new Date(b.startTime), bookingDate) &&
+      new Date(b.startTime) < endDateTime &&
+      new Date(b.endTime) > startDateTime
+    );
+    if (overlappingBookings.length > 0) {
+      setError(`Time slot not available on ${format(bookingDate, 'PPP')}`);
+      return false;
     }
     setError('');
     return true;
@@ -146,46 +128,35 @@ const BookingModal = ({
       setError('Please select both start and end time');
       return;
     }
-    if (!startDate || !endDate) {
-      setError('Please select both start and end dates');
-      return;
-    }
     const isValid = await validateBooking();
     if (!isValid) return;
     setIsBooking(true);
     setError('');
     try {
-      const dates = getDatesInRange(startDate, endDate);
-      let allOk = true;
-      for (const date of dates) {
-        const startDateTime = createDateTimeFromDateAndTime(date, startTime);
-        const endDateTime = createDateTimeFromDateAndTime(date, endTime);
-        const booking: Booking = {
-          id: uuidv4(),
-          roomId: room.id,
-          userId: user.id,
-          username: user.username,
-          roomName: room.name,
-          startTime: startDateTime,
-          endTime: endDateTime,
-          duration: calculateDuration(startDateTime, endDateTime),
-          status: 'active',
-          createdAt: new Date(),
-        };
-        const res = await fetch('/api/bookings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(booking)
-        });
-        if (!res.ok) {
-          allOk = false;
-        }
-      }
-      if (allOk) {
+      const startDateTime = createDateTimeFromTime(startTime);
+      const endDateTime = createDateTimeFromTime(endTime);
+      const booking: Booking = {
+        id: uuidv4(),
+        roomId: room.id,
+        userId: user.id,
+        username: user.username,
+        roomName: room.name,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        duration: calculateDuration(startDateTime, endDateTime),
+        status: 'active',
+        createdAt: new Date(),
+      };
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(booking)
+      });
+      if (res.ok) {
         onBookingComplete();
         onClose();
       } else {
-        setError('Booking failed for one or more days. Please try again.');
+        setError('Booking failed. Please try again.');
       }
     } catch (error) {
       console.error('Booking failed:', error);
@@ -195,7 +166,7 @@ const BookingModal = ({
     }
   };
 
-  const getUserDailyUsage = async (): Promise<number> => {
+  const getUserDailyUsage = async (date: Date): Promise<number> => {
     const res = await fetch('/api/bookings', {
       headers: {
         'Content-Type': 'application/json'
@@ -203,13 +174,11 @@ const BookingModal = ({
     });
     if (!res.ok) return 0;
     const bookings: Booking[] = await res.json();
-
     const todayBookings = bookings.filter((b) =>
-      b.userId === user.id && // Use logged-in user's id
+      b.userId === user.id &&
       b.roomId === room.id &&
-      isSameDay(new Date(b.startTime), selectedDate)
+      isSameDay(new Date(b.startTime), date)
     );
-
     return todayBookings.reduce((total, b) => total + b.duration, 0);
   };
 
@@ -222,23 +191,14 @@ const BookingModal = ({
             Book Room: {room.name}
           </Dialog.Title>
           <div className="flex flex-col space-y-2">
-            <label>Start Date:</label>
-            <input
-              type="date"
-              value={format(startDate, 'yyyy-MM-dd')}
-              min={format(new Date(), 'yyyy-MM-dd')}
-              max={format(new Date(new Date().setDate(new Date().getDate() + 5)), 'yyyy-MM-dd')}
-              onChange={e => setStartDate(new Date(e.target.value))}
-              className="border rounded p-2"
-            />
-            <label>End Date:</label>
-            <input
-              type="date"
-              value={format(endDate, 'yyyy-MM-dd')}
-              min={format(startDate, 'yyyy-MM-dd')}
-              max={format(new Date(new Date().setDate(new Date().getDate() + 5)), 'yyyy-MM-dd')}
-              onChange={e => setEndDate(new Date(e.target.value))}
-              className="border rounded p-2"
+            <label>Date:</label>
+            <DatePicker
+              selected={new Date(selectedDate)}
+              onChange={(date) => setSelectedDate(getDateString(date as Date))}
+              minDate={today}
+              maxDate={addDays(today, 4)}
+              dateFormat="yyyy-MM-dd"
+              className="border rounded p-2 w-full"
             />
             <label>Start Time:</label>
             <input
@@ -255,7 +215,7 @@ const BookingModal = ({
               className="border rounded p-2"
             />
             <p className="text-sm text-gray-500">
-              You’ve used {dailyUsage} out of 60 minutes today.
+              You’ve used {dailyUsage} out of 60 minutes on {format(new Date(selectedDate), 'PPP')}.
             </p>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button

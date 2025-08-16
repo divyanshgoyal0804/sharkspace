@@ -36,6 +36,18 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Backend validation: only allow booking within next 5 days
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    // Remove time part for comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 4);
+    if (start < today || start > maxDate || end < today || end > maxDate) {
+      return Response.json({ error: 'Bookings can only be made for the next 5 days.' }, { status: 400 });
+    }
+
     // ✅ Cast status to correct literal type
     const booking: Booking = {
       id: uuidv4(),
