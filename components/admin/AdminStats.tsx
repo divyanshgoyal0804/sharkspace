@@ -71,17 +71,22 @@ export default function AdminStats({ rooms, users, bookings, blockedSlots }: Adm
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl shadow-lg p-6"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+            whileHover={{ scale: 1.02, y: -5 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center`}>
-                <i className={`${stat.icon} text-white text-xl`}></i>
+              <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center shadow-lg`}>
+                <motion.i 
+                  className={`${stat.icon} text-white text-xl`}
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: index * 0.5 }}
+                />
               </div>
-              <div className={`text-2xl font-bold ${stat.textColor}`}>
+              <div className={`text-2xl font-bold ${stat.textColor} dark:text-opacity-90`}>
                 {stat.value}
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600">{stat.title}</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300 transition-colors duration-300">{stat.title}</h3>
           </motion.div>
         ))}
       </div>
@@ -91,30 +96,36 @@ export default function AdminStats({ rooms, users, bookings, blockedSlots }: Adm
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white rounded-xl shadow-lg p-6"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
         >
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            <i className="ri-calendar-check-line mr-2 text-blue-600"></i>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 transition-colors duration-300">
+            <i className="ri-calendar-check-line mr-2 text-blue-600 dark:text-blue-400"></i>
             Recent Bookings
           </h3>
           <div className="space-y-3">
             {recentBookings.length > 0 ? (
-              recentBookings.map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              recentBookings.map((booking, index) => (
+                <motion.div 
+                  key={booking.id} 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 transition-colors duration-300"
+                >
                   <div>
-                    <p className="font-medium text-gray-900">{booking.roomName}</p>
-                    <p className="text-sm text-gray-500">{booking.username}</p>
+                    <p className="font-medium text-gray-900 dark:text-white transition-colors duration-300">{booking.roomName}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">{booking.username}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{booking.duration}m</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-300">{booking.duration}m</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                       {new Date(booking.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                </div>
+                </motion.div>
               ))
             ) : (
-              <p className="text-gray-500 text-center py-4">No recent bookings</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4 transition-colors duration-300">No recent bookings</p>
             )}
           </div>
         </motion.div>
@@ -123,26 +134,34 @@ export default function AdminStats({ rooms, users, bookings, blockedSlots }: Adm
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white rounded-xl shadow-lg p-6"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
         >
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            <i className="ri-building-line mr-2 text-green-600"></i>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 transition-colors duration-300">
+            <i className="ri-building-line mr-2 text-green-600 dark:text-green-400"></i>
             Room Usage
           </h3>
           <div className="space-y-3">
-            {topRooms.map((room) => (
-              <div key={room.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {topRooms.map((room, index) => (
+              <motion.div 
+                key={room.id} 
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 * index }}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 transition-colors duration-300"
+              >
                 <div>
-                  <p className="font-medium text-gray-900">{room.name}</p>
-                  <p className="text-sm text-gray-500">{room.bookingCount} bookings</p>
+                  <p className="font-medium text-gray-900 dark:text-white transition-colors duration-300">{room.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">{room.bookingCount} bookings</p>
                 </div>
-                <div className="w-16 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((room.bookingCount / Math.max(...topRooms.map(r => r.bookingCount), 1)) * 100, 100)}%` }}
+                <div className="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                  <motion.div 
+                    className="bg-green-500 dark:bg-green-400 h-2 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((room.bookingCount / Math.max(...topRooms.map(r => r.bookingCount), 1)) * 100, 100)}%` }}
+                    transition={{ duration: 1, delay: 0.2 * index }}
                   />
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </motion.div>
@@ -153,36 +172,51 @@ export default function AdminStats({ rooms, users, bookings, blockedSlots }: Adm
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-white rounded-xl shadow-lg p-6 text-center"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+          whileHover={{ scale: 1.05 }}
         >
-          <i className="ri-calendar-line text-3xl text-blue-600 mb-3"></i>
-          <h4 className="text-lg font-bold text-gray-900">This Week</h4>
-          <p className="text-2xl font-bold text-blue-600">{thisWeekBookings.length}</p>
-          <p className="text-sm text-gray-500">Bookings</p>
+          <motion.i 
+            className="ri-calendar-line text-3xl text-blue-600 dark:text-blue-400 mb-3 block"
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          <h4 className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">This Week</h4>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{thisWeekBookings.length}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Bookings</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-white rounded-xl shadow-lg p-6 text-center"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+          whileHover={{ scale: 1.05 }}
         >
-          <i className="ri-calendar-2-line text-3xl text-purple-600 mb-3"></i>
-          <h4 className="text-lg font-bold text-gray-900">This Month</h4>
-          <p className="text-2xl font-bold text-purple-600">{thisMonthBookings.length}</p>
-          <p className="text-sm text-gray-500">Bookings</p>
+          <motion.i 
+            className="ri-calendar-2-line text-3xl text-purple-600 dark:text-purple-400 mb-3 block"
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+          />
+          <h4 className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">This Month</h4>
+          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{thisMonthBookings.length}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Bookings</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="bg-white rounded-xl shadow-lg p-6 text-center"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+          whileHover={{ scale: 1.05 }}
         >
-          <i className="ri-time-line text-3xl text-orange-600 mb-3"></i>
-          <h4 className="text-lg font-bold text-gray-900">Avg Duration</h4>
-          <p className="text-2xl font-bold text-orange-600">{avgBookingDuration}m</p>
-          <p className="text-sm text-gray-500">Per Booking</p>
+          <motion.i 
+            className="ri-time-line text-3xl text-orange-600 dark:text-orange-400 mb-3 block"
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
+          />
+          <h4 className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">Avg Duration</h4>
+          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{avgBookingDuration}m</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Per Booking</p>
         </motion.div>
       </div>
     </div>

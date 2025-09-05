@@ -26,6 +26,7 @@ interface BookingModalProps {
   onClose: () => void;
   onBookingComplete: () => void;
   user: { id: string; username: string; role: string };
+  selectedDate?: Date;
 }
 
 const BookingModal = ({
@@ -186,42 +187,42 @@ const BookingModal = ({
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-md w-full rounded bg-white p-6 space-y-4">
-          <Dialog.Title className="text-xl font-semibold">
+                <Dialog.Panel className="mx-auto max-w-md w-full rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 space-y-4 transition-colors duration-300">
+          <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white">
             Book Room: {room.name}
           </Dialog.Title>
           <div className="flex flex-col space-y-2">
-            <label>Date:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date:</label>
             <DatePicker
               selected={new Date(selectedDate)}
               onChange={(date) => setSelectedDate(getDateString(date as Date))}
               minDate={today}
               maxDate={addDays(today, 4)}
               dateFormat="yyyy-MM-dd"
-              className="border rounded p-2 w-full"
+              className="border border-gray-300 dark:border-gray-600 rounded p-2 w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
             />
-            <label>Start Time:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time:</label>
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="border rounded p-2"
+              className="border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300 focus:ring-2 focus:ring-blue-500"
             />
-            <label>End Time:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time:</label>
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="border rounded p-2"
+              className="border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300 focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-sm text-gray-500">
-              You’ve used {dailyUsage} out of 60 minutes on {format(new Date(selectedDate), 'PPP')}.
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              You've used {dailyUsage} out of 60 minutes on {format(new Date(selectedDate), 'PPP')}.
             </p>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
             <button
               onClick={handleBooking}
               disabled={isBooking}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+              className="bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors duration-300 disabled:opacity-50"
             >
               {isBooking ? 'Booking...' : 'Book'}
             </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Room, Booking, User, BlockedSlot } from '@/lib/types';
 import Layout from '@/components/Layout';
 import RoomManagement from '@/components/admin/RoomManagement';
@@ -8,6 +9,27 @@ import UserManagement from '@/components/admin/UserManagement';
 import BookingManagement from '@/components/admin/BookingManagement';
 import BlockedSlotManagement from '@/components/admin/BlockedSlotManagement';
 import AdminStats from '@/components/admin/AdminStats';
+
+const tabVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 }
+};
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'rooms' | 'users' | 'bookings' | 'blocked'>('overview');
@@ -166,60 +188,114 @@ export default function AdminDashboard() {
 
   return (
     <Layout title="Admin Dashboard">
-      <div className="space-y-8">
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white">
-          <h2 className="text-2xl font-bold mb-2">Admin Control Panel</h2>
-          <p className="text-purple-100">Manage rooms, users, and bookings for SharkSpace Noida</p>
-        </div>
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-8"
+      >
+        <motion.div 
+          variants={itemVariants}
+          className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-700 dark:to-pink-700 rounded-2xl p-6 text-white shadow-xl"
+          whileHover={{ scale: 1.02 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.h2 
+            className="text-2xl font-bold mb-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            Admin Control Panel
+          </motion.h2>
+          <motion.p 
+            className="text-purple-100"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            Manage rooms, users, and bookings for SharkSpace Noida
+          </motion.p>
+        </motion.div>
 
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
+        <motion.div 
+          variants={itemVariants}
+          className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto transition-colors duration-300"
+        >
+          {tabs.map((tab, index) => (
+            <motion.button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
-              className={`px-4 py-2 rounded-md font-medium transition-all cursor-pointer whitespace-nowrap ${
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`px-4 py-2 rounded-md font-medium transition-all cursor-pointer whitespace-nowrap relative ${
                 activeTab === tab.key
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <i className={`${tab.icon} mr-2`}></i>
-              {tab.label}
-            </button>
+              {activeTab === tab.key && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-white dark:bg-gray-700 rounded-md shadow-sm"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">
+                <motion.i 
+                  className={`${tab.icon} mr-2`}
+                  animate={{ rotate: activeTab === tab.key ? [0, 10, -10, 0] : 0 }}
+                  transition={{ duration: 0.5 }}
+                />
+                {tab.label}
+              </span>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
-        <div>
-          {activeTab === 'overview' && (
-            <AdminStats 
-              rooms={rooms} 
-              users={users} 
-              bookings={bookings} 
-              blockedSlots={blockedSlots}
-            />
-          )}
-          
-          {activeTab === 'rooms' && (
-            <RoomManagement rooms={rooms} onUpdate={refreshData} />
-          )}
-          
-          {activeTab === 'users' && (
-            <UserManagement users={users} onUpdate={refreshData} />
-          )}
-          
-          {activeTab === 'bookings' && (
-            <BookingManagement bookings={bookings} rooms={rooms} onUpdate={refreshData} />
-          )}
-          
-          {activeTab === 'blocked' && (
-            <BlockedSlotManagement 
-              blockedSlots={blockedSlots} 
-              rooms={rooms} 
-              onUpdate={refreshData} 
-            />
-          )}
-        </div>
-      </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            variants={tabVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+          >
+            {activeTab === 'overview' && (
+              <AdminStats 
+                rooms={rooms} 
+                users={users} 
+                bookings={bookings} 
+                blockedSlots={blockedSlots}
+              />
+            )}
+            
+            {activeTab === 'rooms' && (
+              <RoomManagement rooms={rooms} onUpdate={refreshData} />
+            )}
+            
+            {activeTab === 'users' && (
+              <UserManagement users={users} onUpdate={refreshData} />
+            )}
+            
+            {activeTab === 'bookings' && (
+              <BookingManagement bookings={bookings} rooms={rooms} onUpdate={refreshData} />
+            )}
+            
+            {activeTab === 'blocked' && (
+              <BlockedSlotManagement 
+                blockedSlots={blockedSlots} 
+                rooms={rooms} 
+                onUpdate={refreshData} 
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
     </Layout>
   );
 }

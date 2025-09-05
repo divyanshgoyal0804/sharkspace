@@ -93,7 +93,7 @@ export default function RoomManagement({ rooms: initialRooms, onUpdate }: RoomMa
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Room Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Room Management</h2>
         <Button onClick={() => openModal()} icon={<i className="ri-add-line"></i>}>
           Add Room
         </Button>
@@ -106,14 +106,21 @@ export default function RoomManagement({ rooms: initialRooms, onUpdate }: RoomMa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl shadow-lg overflow-hidden"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors duration-300"
+            whileHover={{ scale: 1.02, y: -5 }}
           >
             <div className="h-48 overflow-hidden">
-              <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+              <motion.img 
+                src={room.image} 
+                alt={room.name} 
+                className="w-full h-full object-cover"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.3 }}
+              />
             </div>
             <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{room.name}</h3>
-              <p className="text-gray-600 text-sm mb-4">{room.description}</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">{room.name}</h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 transition-colors duration-300">{room.description}</p>
               <div className="flex space-x-2">
                 <Button size="sm" onClick={() => openModal(room)} icon={<i className="ri-edit-line"></i>}>Edit</Button>
                 <Button size="sm" variant="danger" onClick={() => handleDelete(room.id)} icon={<i className="ri-delete-bin-line"></i>}>Delete</Button>
@@ -131,16 +138,21 @@ export default function RoomManagement({ rooms: initialRooms, onUpdate }: RoomMa
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
           />
-          <textarea
-            placeholder="Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full p-2 border rounded"
-            rows={3}
-            required
-          />
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">
+              Description
+            </label>
+            <textarea
+              placeholder="Enter room description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-300 placeholder-gray-400 dark:placeholder-gray-500 resize-none"
+              rows={3}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">
               Room Image
             </label>
             <input
@@ -152,12 +164,12 @@ export default function RoomManagement({ rooms: initialRooms, onUpdate }: RoomMa
                   setFormData({ ...formData, image: file });
                 }
               }}
-              className="block w-full text-sm text-gray-500
+              className="block w-full text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-full file:border-0
                 file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100"
+                file:bg-blue-50 dark:file:bg-blue-900 file:text-blue-700 dark:file:text-blue-200
+                hover:file:bg-blue-100 dark:hover:file:bg-blue-800 file:transition-colors file:duration-300"
               required={!editingRoom?.image}
             />
           </div>

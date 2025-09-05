@@ -1,11 +1,11 @@
 // lib/auth.ts
-//require('dotenv').config();
-
 import { NextRequest } from 'next/server';
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
 const JWT_SECRET = process.env.JWT_SECRET;
-
-
 
 export interface User {
   id: string;
@@ -15,7 +15,6 @@ export interface User {
   createdAt: Date;
 }
 
-// ✅ Fixed: Added 'exp'
 export interface DecodedToken {
   userId: string;
   username: string;
@@ -43,6 +42,7 @@ export function generateToken(user: Pick<User, 'id' | 'username' | 'role'>): str
     username: user.username,
     role: user.role,
     exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+    iat: Math.floor(Date.now() / 1000),
   };
 
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -63,6 +63,15 @@ export function verifyToken(token: string): DecodedToken | null {
       return null;
     }
 
+    // Verify signature (basic check)
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payloadStr = btoa(JSON.stringify(payload));
+    const expectedSignature = btoa(`${header}.${payloadStr}.${JWT_SECRET}`);
+    
+    if (parts[2] !== expectedSignature) {
+      return null;
+    }
+
     return {
       userId: payload.userId,
       username: payload.username,
@@ -80,5 +89,19 @@ export function getTokenFromRequest(request: NextRequest): string | null {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
+  
+  // Also check for cookie-based auth as fallback
+  const cookieHeader = request.headers.get('cookie');
+  if (cookieHeader) {
+    const tokenMatch = cookieHeader.match(/token=([^;]+)/);
+    if (tokenMatch) {
+      return tokenMatch[1];
+    }
+  }
+  
   return null;
+}
+
+export function isAdmin(user: DecodedToken | null): boolean {
+  return user?.role === 'admin';
 }

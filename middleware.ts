@@ -1,38 +1,96 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { DecodedToken } from '@/lib/auth';
+import { verifyToken, getTokenFromRequest } from '@/lib/auth';
+import { checkRateLimit, getRateLimitIdentifier, validateOrigin, detectSuspiciousActivity, logSecurityEvent } from '@/lib/security';
 
 export function middleware(request: NextRequest) {
-  // Skip for non-API routes
-  if (!request.url.includes('/api/')) {
-    return NextResponse.next();
-  }
+  const url = new URL(request.url);
+  const pathname = url.pathname;
 
-  // Allow public routes
+  // Add security headers for all responses
+  const response = NextResponse.next();
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Skip middleware for static files and Next.js internals
   if (
-    request.url.includes('/api/auth/') ||
-    request.url.includes('/api/init') ||
-    request.url.includes('/api/rooms') ||
-    request.url.includes('/api/bookings')
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/static/') ||
+    pathname.includes('.') && !pathname.startsWith('/api/')
   ) {
-    return NextResponse.next();
+    return response;
   }
 
-  // For admin routes, use hardcoded admin check for now
-  if (request.url.includes('/api/admin/')) {
-    // Extract username from request headers or cookies
-    const username = request.headers.get('x-user') || 'admin'; // Default to 'admin' for testing
+  // Rate limiting for API routes
+  if (pathname.startsWith('/api/')) {
+    const identifier = getRateLimitIdentifier(request);
+    const isAuthRoute = pathname.includes('/auth/');
+    const rateLimit = checkRateLimit(identifier, isAuthRoute ? 10 : 100);
 
-    if (username !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!rateLimit.allowed) {
+      logSecurityEvent({
+        type: 'rate_limit',
+        identifier,
+        details: { pathname, userAgent: request.headers.get('user-agent') }
+      });
+      
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' }, 
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString()
+          }
+        }
+      );
     }
-    return NextResponse.next();
+
+    response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
   }
 
-  // Default response for other routes
-  return NextResponse.next();
+  // Detect suspicious activity
+  const suspiciousCheck = detectSuspiciousActivity(request);
+  if (suspiciousCheck.suspicious) {
+    logSecurityEvent({
+      type: 'suspicious_activity',
+      identifier: getRateLimitIdentifier(request),
+      details: { reason: suspiciousCheck.reason, pathname }
+    });
+    
+    return NextResponse.json(
+      { error: 'Request blocked for security reasons' },
+      { status: 403 }
+    );
+  }
+
+  // Validate origin for non-GET API requests (CSRF protection)
+  if (pathname.startsWith('/api/') && request.method !== 'GET') {
+    if (!validateOrigin(request)) {
+      return NextResponse.json(
+        { error: 'Invalid origin' },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Protected page routes - no authentication required anymore
+  if (pathname === '/admin' || pathname === '/client') {
+    return response;
+  }
+
+  // API route protection - only keep rate limiting and security checks
+  if (pathname.startsWith('/api/')) {
+    // All API routes are now public, no authentication required
+    return response;
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 }

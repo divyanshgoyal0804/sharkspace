@@ -3,7 +3,7 @@ import { storage, connectDB } from '@/lib/storage';
 
 export async function DELETE(
   req: NextRequest,
-  { params }: any // ← Use `any` to bypass the type check
+  { params }: { params: { id: string } }
 ) {
   try {
     await connectDB();
