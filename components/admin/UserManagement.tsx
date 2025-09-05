@@ -50,15 +50,11 @@ export default function UserManagement({ users, onUpdate }: UserManagementProps)
         role: formData.role
       };
 
-      console.log('Creating user with data:', { ...userData, password: '[HIDDEN]' });
-
       const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
-
-      console.log('Response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -68,7 +64,6 @@ export default function UserManagement({ users, onUpdate }: UserManagementProps)
       }
 
       const result = await response.json();
-      console.log('User created successfully:', result);
 
       // Reset form data
       setFormData({

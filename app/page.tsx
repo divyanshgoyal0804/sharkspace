@@ -116,7 +116,7 @@ export default function Home() {
           transition={{ duration: 0.5 }}
           className="absolute top-8 right-8"
         >
-          <ThemeToggle />
+         {/* <ThemeToggle /> */}
         </motion.div>
         
         <motion.div 
