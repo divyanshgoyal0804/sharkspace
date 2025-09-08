@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken, getTokenFromRequest } from '@/lib/auth';
-import { checkRateLimit, getRateLimitIdentifier, validateOrigin, detectSuspiciousActivity, logSecurityEvent } from '@/lib/security';
+import { validateOrigin, detectSuspiciousActivity, logSecurityEvent } from '@/lib/security';
 
 export function middleware(request: NextRequest) {
   const url = new URL(request.url);
@@ -23,39 +23,16 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Rate limiting for API routes
-  if (pathname.startsWith('/api/')) {
-    const identifier = getRateLimitIdentifier(request);
-    const isAuthRoute = pathname.includes('/auth/');
-    const rateLimit = checkRateLimit(identifier, isAuthRoute ? 10 : 100);
-
-    if (!rateLimit.allowed) {
-      logSecurityEvent({
-        type: 'rate_limit',
-        identifier,
-        details: { pathname, userAgent: request.headers.get('user-agent') }
-      });
-      
-      return NextResponse.json(
-        { error: 'Rate limit exceeded' }, 
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString()
-          }
-        }
-      );
-    }
-
-    response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
-  }
-
   // Detect suspicious activity
   const suspiciousCheck = detectSuspiciousActivity(request);
   if (suspiciousCheck.suspicious) {
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                    request.headers.get('x-real-ip') || 
+                    'unknown';
+    
     logSecurityEvent({
       type: 'suspicious_activity',
-      identifier: getRateLimitIdentifier(request),
+      identifier: clientIP,
       details: { reason: suspiciousCheck.reason, pathname }
     });
     
