@@ -11,7 +11,7 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-export function validateUsername(username: string): ValidationResult<string> {
+export function validateUsername(username: string, role?: string): ValidationResult<string> {
   if (!username || typeof username !== 'string') {
     return { success: false, error: 'Username is required' };
   }
@@ -24,8 +24,16 @@ export function validateUsername(username: string): ValidationResult<string> {
     return { success: false, error: 'Username must be less than 50 characters' };
   }
   
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    return { success: false, error: 'Username can only contain letters, numbers, and underscores' };
+  // Allow @ symbol for client users, but restrict admin usernames
+  if (role === 'admin') {
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return { success: false, error: 'Admin username can only contain letters, numbers, and underscores' };
+    }
+  } else {
+    // For client users, allow @ symbol (useful for email-like usernames)
+    if (!/^[a-zA-Z0-9_@.]+$/.test(username)) {
+      return { success: false, error: 'Username can only contain letters, numbers, underscores, @ and periods' };
+    }
   }
   
   return { success: true, data: username.trim() };
@@ -83,7 +91,8 @@ export function validateLoginData(data: any): ValidationResult<{ username: strin
     return { success: false, error: 'Invalid request data' };
   }
   
-  const usernameValidation = validateUsername(data.username);
+  // For login, allow flexible username format since we don't know the role yet
+  const usernameValidation = validateUsername(data.username, 'client');
   if (!usernameValidation.success) {
     return { success: false, error: usernameValidation.error };
   }

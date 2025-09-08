@@ -30,8 +30,14 @@ export async function POST(request: NextRequest) {
     const rawData = await request.json();
     const sanitizedData = sanitizeObject(rawData);
     
-    // Validate input
-    const usernameValidation = validateUsername(sanitizedData.username);
+    // Validate role first to determine username validation rules
+    const roleValidation = validateRole(sanitizedData.role);
+    if (!roleValidation.success) {
+      return Response.json({ error: roleValidation.error }, { status: 400 });
+    }
+    
+    // Validate input with role-specific rules
+    const usernameValidation = validateUsername(sanitizedData.username, roleValidation.data);
     if (!usernameValidation.success) {
       return Response.json({ error: usernameValidation.error }, { status: 400 });
     }
@@ -39,11 +45,6 @@ export async function POST(request: NextRequest) {
     const passwordValidation = validatePassword(sanitizedData.password);
     if (!passwordValidation.success) {
       return Response.json({ error: passwordValidation.error }, { status: 400 });
-    }
-    
-    const roleValidation = validateRole(sanitizedData.role);
-    if (!roleValidation.success) {
-      return Response.json({ error: roleValidation.error }, { status: 400 });
     }
 
     // Check if user already exists
